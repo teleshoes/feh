@@ -32,7 +32,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "events.h"
 #include "signals.h"
 #include "wallpaper.h"
+#include <stdio.h>
+#include <ncurses.h>
 
+#define WIDTH 30
+#define HEIGHT 10 
+
+int ncurses_cpid = 0;
 char **cmdargv = NULL;
 int cmdargc = 0;
 char *mode = NULL;
@@ -77,6 +83,31 @@ int main(int argc, char **argv)
 		opt.slideshow = 1;
 		init_slideshow_mode();
 	}
+
+   	initscr();
+   	noecho();
+   	cbreak();
+	WINDOW *win = newwin(HEIGHT, WIDTH, 0, 0);
+	keypad(win, TRUE);
+    refresh();
+    ncurses_cpid = fork();
+    if(ncurses_cpid == 0){
+      while(1){
+        int ch = wgetch(win);
+        if(ch == KEY_LEFT){
+          mvprintw(0, 0, "LEFT\n");
+        }else if(ch == KEY_RIGHT){
+          mvprintw(0, 0, "RIGHT\n");
+        }else if(ch == '\n'){
+          mvprintw(0, 0, "ENTER\n");
+        }else if(ch == ' '){
+          mvprintw(0, 0, "SPACE\n");
+        }else if(ch == 'q'){
+          mvprintw(0, 0, "Q\n");
+        }
+        refresh();
+      }
+    }
 
 	/* main event loop */
 	while (feh_main_iteration(1));
@@ -201,6 +232,12 @@ void feh_clean_exit(void)
 
 	if (opt.filelistfile)
 		feh_write_filelist(filelist, opt.filelistfile);
+
+    clrtoeol();
+	refresh();
+	endwin();
+
+    kill(ncurses_cpid, SIGTERM);
 
 	return;
 }
